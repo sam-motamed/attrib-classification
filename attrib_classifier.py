@@ -101,7 +101,8 @@ loss_stats = {
     'train': []
 }
 
-device = "cpu"
+device = torch.device("cuda:0")
+print(device)
 print("number of cpu", os.cpu_count())
 if torch.cuda.device_count() > 0:
     print("Let's use", torch.cuda.device_count(), "GPUs!")
