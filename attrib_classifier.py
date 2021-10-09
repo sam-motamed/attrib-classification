@@ -113,7 +113,7 @@ model = model.to(device)
 checkpoint_path = os.path.join(os.getcwd(), "checkpoint.pth")
 criterion = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=12)
+train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
 model.train()
 running_loss = 0.0
 for e in tqdm(range(1, EPOCHS+1)):
