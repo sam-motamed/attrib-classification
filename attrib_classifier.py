@@ -102,6 +102,7 @@ loss_stats = {
 }
 
 device = torch.device("cuda:0")
+print(device)
 model = Resnext50(8)
 model.to(device)
 checkpoint_path = os.path.join(os.getcwd(), "checkpoint.pth")
