@@ -90,7 +90,7 @@ def parse(args=None):
 args = parse()
 train_dataset = Custom(args.data_path, args.attr_path, args.img_size)
 EPOCHS = 150
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 LEARNING_RATE = 0.0003
 NUM_FEATURES = len(train_dataset)
 NUM_CLASSES = 8
@@ -102,13 +102,18 @@ loss_stats = {
 }
 
 device = torch.device("cuda:0")
-print(device)
+print("number of cpu", os.cpu_count())
+if torch.cuda.device_count() > 0:
+    print("Let's use", torch.cuda.device_count(), "GPUs!")
+else:
+    print("NO GPU WAS FOUND")
 model = Resnext50(8)
-model.to(device)
+model = torch.nn.DataParallel(model, device_ids=[0, 1, 2])
+model = model.to(device)
 checkpoint_path = os.path.join(os.getcwd(), "checkpoint.pth")
 criterion = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True)
+train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=12)
 model.train()
 running_loss = 0.0
 for e in tqdm(range(1, EPOCHS+1)):
