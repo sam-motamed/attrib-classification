@@ -108,7 +108,7 @@ if torch.cuda.device_count() > 0:
 else:
     print("NO GPU WAS FOUND")
 model = Resnext50(8)
-model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+#model = torch.nn.DataParallel(model, device_ids=[0])
 model = model.to(device)
 checkpoint_path = os.path.join(os.getcwd(), "checkpoint.pth")
 criterion = nn.BCELoss()
