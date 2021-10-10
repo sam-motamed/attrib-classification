@@ -91,7 +91,7 @@ args = parse()
 train_dataset = Custom(args.data_path, args.attr_path, args.img_size)
 EPOCHS = 150
 BATCH_SIZE = 128
-LEARNING_RATE = 0.0003
+LEARNING_RATE = 0.003
 NUM_FEATURES = len(train_dataset)
 NUM_CLASSES = 8
 accuracy_stats = {
@@ -109,12 +109,12 @@ if torch.cuda.device_count() > 0:
 else:
     print("NO GPU WAS FOUND")
 model = Resnext50(8)
-#model = torch.nn.DataParallel(model, device_ids=[0])
+model = torch.nn.DataParallel(model, device_ids=[0, 1])
 model = model.to(device)
 checkpoint_path = os.path.join(os.getcwd(), "checkpoint.pth")
 criterion = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 model.train()
 running_loss = 0.0
 for e in tqdm(range(1, EPOCHS+1)):
