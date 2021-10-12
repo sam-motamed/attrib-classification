@@ -26,7 +26,7 @@ from torchvision import datasets, models, transforms
 import torch.optim as optim
 from tqdm import tqdm
 from torch.autograd import Variable
-
+import pandas as pd
 class MulticlassClassification(nn.Module):
     def __init__(self, n_classes):
         super().__init__()
@@ -40,7 +40,8 @@ class MulticlassClassification(nn.Module):
     def forward(self, x):
         return self.sigm(self.base_model(x))
 
-def classify(img_path, net, use_gpu):
+def classify(img_path, net, use_gpu, actual_race):
+    labels = ['East_Asian', 'Southeast_Asian','Black','Indian','White','Middle_Eastern', 'Latino']
     transform =transforms.Compose([
             transforms.Resize((128, 128)),
             transforms.ToTensor(),
@@ -57,11 +58,24 @@ def classify(img_path, net, use_gpu):
     y = net(x).cpu()
     y = torch.squeeze(y)
     y = y.data.numpy()
-    return y
+    race_labels = y[1:]
+    max_prob = np.argmax(race_labels)
+    classed_race = labels[max_prob]
+    if classed_race == actual_race:
+        print("correct")
+        return 1
+    else:
+        print("missed")
+        return 0
 use_gpu = torch.cuda.is_available()
 model = MulticlassClassification(8)
 model.load_state_dict(torch.load('./checkpoint.pth'), strict=False)
 model.eval()
-img = './test/000427.jpg'
-pred = classify(img, model, use_gpu)
-print(pred)
+df = pd.read_csv('./fairface_label_val.csv')
+race = df['race']
+imm_id = df['file']
+correct_class = 0
+for idx in range(len(imm_id)):
+    correct_class += classify(imm_id[idx], model, use_gpu, race[idx])
+print(correct_class)
+    
