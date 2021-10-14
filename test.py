@@ -31,8 +31,8 @@ from sklearn.metrics import classification_report, confusion_matrix
 dict_race_to_number = {'White' : 0, 
                        'Black': 1, 
                        'Latino_Hispanic': 2, 
-                       'East Asian' : 3, 
-                       'Southeast Asian' : 4, 
+                       'East Asian' : 2, 
+                       'Southeast Asian' : 2, 
                        'Indian' : 5, 
                        'Middle Eastern' : 6}
 class MulticlassClassification(nn.Module):
@@ -76,16 +76,9 @@ def classify(img_path, net, use_gpu):
         return 0'''
     return max_prob_idx
 use_gpu = torch.cuda.is_available()
-model = models.vgg16(pretrained = True)
-model.classifier = nn.Sequential(
-    nn.Linear(25088, 4096, bias = True),
-    nn.ReLU(inplace = True),
-    nn.Dropout(0.4),
-    nn.Linear(4096, 2048, bias = True),
-    nn.ReLU(inplace = True),
-    nn.Dropout(0.4),
-    nn.Linear(2048, 7)
-)
+model = models.resnet50(pretrained=True)
+num_ftrs = model.fc.in_features
+model.fc = nn.Linear(num_ftrs, 3)
 model.load_state_dict(torch.load('./checkpoint.pth'), strict=False)
 model.eval()
 df = pd.read_csv('./fairface_label_val.csv')
@@ -93,11 +86,11 @@ race = df['race']
 imm_id = df['file']
 correct_class = 0
 for idx in range(len(imm_id)):
-    if classify(imm_id[idx], model, use_gpu) == dict_race_to_number[race[idx]]:
-        correct_class += 1
-        print("CORRECT")
-    else:
-        print("MISCLASSIFIED")
-        pass
+    if race[idx] in ['East Asian', 'Southeat Asian', 'White', 'Black']:
+        if classify(imm_id[idx], model, use_gpu) == dict_race_to_number[race[idx]]:
+            correct_class += 1
+        else:
+            pass
+        print("Extected:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  got  " + race[idx] )
 print(correct_class)
 
