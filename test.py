@@ -30,7 +30,7 @@ import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix
 dict_race_to_number = {'White' : 0, 
                        'Black': 1, 
-                       'Latino_Hispanic': 2, 
+                       'Latino_Hispanic': 4, 
                        'East Asian' : 2, 
                        'Southeast Asian' : 2, 
                        'Indian' : 5, 
@@ -85,12 +85,14 @@ df = pd.read_csv('./fairface_label_val.csv')
 race = df['race']
 imm_id = df['file']
 correct_class = 0
+i = 0
 for idx in range(len(imm_id)):
+    i += 1
     if race[idx] in ['East Asian', 'Southeat Asian', 'White', 'Black']:
         if classify(imm_id[idx], model, use_gpu) == dict_race_to_number[race[idx]]:
             correct_class += 1
         else:
             pass
-        print("Extected:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  got  " + race[idx] )
-print(correct_class)
+        #print("Extected:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  got  " + race[idx] )
+print("accuracy of 3 class pred is", correct_class / i)
 
