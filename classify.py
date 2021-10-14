@@ -30,12 +30,8 @@ import pandas as pd
 
 race_list = ['White', 'Black', 'Latino_Hispanic', 'East Asian', 'Southeast Asian', 'Indian', 'Middle Eastern']
 dict_race_to_number = {'White' : 0, 
-                       'Black': 1, 
-                       'Latino_Hispanic': 2, 
-                       'East_Asian' : 3, 
-                       'Southeast_Asian' : 4, 
-                       'Indian' : 5, 
-                       'Middle_Eastern' : 6}
+                       'Black': 1,
+                       'Asian' : 2}
 def BCELoss_IGNORE(x, y, ignore_idx):
     
     ignored_y = y[[y != ignore_idx]]
@@ -43,21 +39,6 @@ def BCELoss_IGNORE(x, y, ignore_idx):
     return torch.nn.functional.binary_cross_entropy(ignored_x, ignored_y)
     
     
-    
-    
-class Resnext50(nn.Module):
-    def __init__(self, n_classes):
-        super().__init__()
-        resnet = models.resnext50_32x4d(pretrained=True)
-        resnet.fc = nn.Sequential(
-            nn.Dropout(p=0.2),
-            nn.Linear(in_features=resnet.fc.in_features, out_features=7)
-        )
-        self.base_model = resnet
-        self.sm = nn.Softmax()
-    def forward(self, x):
-        return self.sm(self.base_model(x))
-
 
 class Custom(data.Dataset):
     def __init__(self, data_path, attr_path, image_size):
@@ -93,7 +74,7 @@ def parse(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', dest='data_path', type=str, default='./train/')
     parser.add_argument('--attr_path', dest='attr_path', type=str, default='./ff-race.txt')
-    parser.add_argument('--img_size', dest='img_size', type=int, default=128)
+    parser.add_argument('--img_size', dest='img_size', type=int, default=256)
     return parser.parse_args(args)
 args = parse()
 train_dataset = Custom(args.data_path, args.attr_path, args.img_size)
@@ -116,17 +97,11 @@ if torch.cuda.device_count() > 0:
     print("Let's use", torch.cuda.device_count(), "GPUs!")
 else:
     print("NO GPU WAS FOUND")
-model = models.vgg16(pretrained = True)
-model.classifier = nn.Sequential(
-    nn.Linear(25088, 4096, bias = True),
-    nn.ReLU(inplace = True),
-    nn.Dropout(0.4),
-    nn.Linear(4096, 2048, bias = True),
-    nn.ReLU(inplace = True),
-    nn.Dropout(0.4),
-    nn.Linear(2048, 7)
-)
-model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+model = models.resnet50(pretrained=True)
+num_ftrs = model.fc.in_features
+model.fc = nn.Linear(num_ftrs, 3)
+
+model = torch.nn.DataParallel(model, device_ids=[0, 1])
 model = model.to(device)
 checkpoint_path = os.path.join(os.getcwd(), "checkpoint.pth")
 criterion = nn.CrossEntropyLoss()
