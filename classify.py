@@ -78,7 +78,7 @@ def parse(args=None):
     return parser.parse_args(args)
 args = parse()
 train_dataset = Custom(args.data_path, args.attr_path, args.img_size)
-EPOCHS = 150
+EPOCHS = 250
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0003
 NUM_FEATURES = len(train_dataset)
