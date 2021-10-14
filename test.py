@@ -27,6 +27,14 @@ import torch.optim as optim
 from tqdm import tqdm
 from torch.autograd import Variable
 import pandas as pd
+from sklearn.metrics import classification_report, confusion_matrix
+dict_race_to_number = {'White' : 0, 
+                       'Black': 1, 
+                       'Latino_Hispanic': 2, 
+                       'East Asian' : 3, 
+                       'Southeast Asian' : 4, 
+                       'Indian' : 5, 
+                       'Middle Eastern' : 6}
 class MulticlassClassification(nn.Module):
     def __init__(self, n_classes):
         super().__init__()
@@ -59,15 +67,14 @@ def classify(img_path, net, use_gpu):
     y = torch.squeeze(y)
     y = y.data.numpy()
     #race_labels = y[1:]
-    # max_prob = np.argmax(race_labels)
-    #classed_race = labels[max_prob]
+    max_prob_idx = np.argmax(y)
     '''if classed_race == actual_race:
         print("correct")
         return 1
     else:
         print("missed")
         return 0'''
-    return y
+    return max_prob_idx
 use_gpu = torch.cuda.is_available()
 model = models.vgg16(pretrained = True)
 model.classifier = nn.Sequential(
@@ -86,4 +93,11 @@ race = df['race']
 imm_id = df['file']
 correct_class = 0
 for idx in range(len(imm_id)):
-    print(classify(imm_id[idx], model, use_gpu))
+    if classify(imm_id[idx], model, use_gpu) == dict_race_to_number[race[idx]]:
+        correct_class += 1
+        print("CORRECT")
+    else:
+        print("MISCLASSIFIED")
+        pass
+print(correct_class)
+
