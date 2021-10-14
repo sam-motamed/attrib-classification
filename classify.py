@@ -116,13 +116,22 @@ if torch.cuda.device_count() > 0:
     print("Let's use", torch.cuda.device_count(), "GPUs!")
 else:
     print("NO GPU WAS FOUND")
-model = Resnext50(7)
-model = torch.nn.DataParallel(model, device_ids=[0])
+model = models.vgg16(pretrained = True)
+model.classifier = nn.Sequential(
+    nn.Linear(25088, 4096, bias = True),
+    nn.ReLU(inplace = True),
+    nn.Dropout(0.4),
+    nn.Linear(4096, 2048, bias = True),
+    nn.ReLU(inplace = True),
+    nn.Dropout(0.4),
+    nn.Linear(2048, 7)
+)
+model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3])
 model = model.to(device)
 checkpoint_path = os.path.join(os.getcwd(), "checkpoint.pth")
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 model.train()
 running_loss = 0.0
 for e in tqdm(range(1, EPOCHS+1)):
