@@ -89,7 +89,7 @@ i = 0
 with torch.no_grad():
     for idx in range(len(imm_id)):
         i += 1
-        if race[idx] in ['East Asian', 'Southeat Asian', 'White', 'Black']:
+        if race[idx] in ['White', 'Black']:
             if classify(imm_id[idx], model, use_gpu) == dict_race_to_number[race[idx]]:
                 correct_class += 1
             else:
