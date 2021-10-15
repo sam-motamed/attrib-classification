@@ -77,7 +77,7 @@ def classify(img_path, net, use_gpu):
 use_gpu = torch.cuda.is_available()
 model = models.resnet50(pretrained=True)
 num_ftrs = model.fc.in_features
-model.fc = nn.Linear(num_ftrs, 3)
+model.fc = nn.Linear(num_ftrs, 2)
 model.load_state_dict(torch.load('./checkpoint.pth'), strict=False)
 model.eval()
 df = pd.read_csv('./fairface_label_val.csv')
