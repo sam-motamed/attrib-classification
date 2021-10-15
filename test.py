@@ -55,7 +55,7 @@ def classify(img_path, net, use_gpu):
     transform =transforms.Compose([
             transforms.Resize((128, 128)),
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         ])
     img = Image.open(img_path)
     img = transform(img)
@@ -70,7 +70,8 @@ def classify(img_path, net, use_gpu):
     y = y.data.numpy()
     return np.argmax(y)
 use_gpu = torch.cuda.is_available()
-model = models.resnet50(pretrained=True)
+model = models.resnet34(pretrained=True)
+
 num_ftrs = model.fc.in_features
 model.fc = nn.Linear(num_ftrs, 2)
 model.load_state_dict(torch.load('./checkpoint.pth'), strict=False)
@@ -87,9 +88,8 @@ with torch.no_grad():
         if race[idx] in ['White', 'Black']:
             if classify(imm_id[idx], model, use_gpu) == dict_race_to_number[race[idx]]:
                 correct_class += 1
-                print("CORRECT")
             else:
-                print("INCORRECT")
-            #print("Extected:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  got  " + race[idx] )
+                pass
+            print("Image  " + imm_id[idx] + "    got:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  expected  " + race[idx] )
 print("accuracy of 2 class pred is", correct_class / i)
 
