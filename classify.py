@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Sep 22 21:12:13 2021
-
 @author: 16478
 """
 
@@ -30,15 +29,20 @@ import pandas as pd
 
 race_list = ['White', 'Black', 'Latino_Hispanic', 'East Asian', 'Southeast Asian', 'Indian', 'Middle Eastern']
 dict_race_to_number = {'White' : 0, 
-                       'Black': 1,
-                       'Asian' : 2}
+                       'Black': 1}
 def BCELoss_IGNORE(x, y, ignore_idx):
     
     ignored_y = y[[y != ignore_idx]]
     ignored_x = x[[y != ignore_idx]]
     return torch.nn.functional.binary_cross_entropy(ignored_x, ignored_y)
     
-    
+def binary_acc(y_pred, y_test):
+    y_pred_tag = torch.log_softmax(y_pred, dim = 1)
+    _, y_pred_tags = torch.max(y_pred_tag, dim = 1)
+    correct_results_sum = (y_pred_tags == y_test).sum().float()
+    acc = correct_results_sum/y_test.shape[0]
+    acc = torch.round(acc * 100)
+    return acc
 
 class Custom(data.Dataset):
     def __init__(self, data_path, attr_path, image_size):
@@ -74,7 +78,7 @@ def parse(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', dest='data_path', type=str, default='./train/')
     parser.add_argument('--attr_path', dest='attr_path', type=str, default='./ff-race.txt')
-    parser.add_argument('--img_size', dest='img_size', type=int, default=256)
+    parser.add_argument('--img_size', dest='img_size', type=int, default=128)
     return parser.parse_args(args)
 args = parse()
 train_dataset = Custom(args.data_path, args.attr_path, args.img_size)
@@ -82,7 +86,7 @@ EPOCHS = 250
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0003
 NUM_FEATURES = len(train_dataset)
-NUM_CLASSES = 7
+NUM_CLASSES = 2
 accuracy_stats = {
     'train': []
 }
@@ -99,7 +103,7 @@ else:
     print("NO GPU WAS FOUND")
 model = models.resnet50(pretrained=True)
 num_ftrs = model.fc.in_features
-model.fc = nn.Linear(num_ftrs, 3)
+model.fc = nn.Linear(num_ftrs, 2)
 
 model = torch.nn.DataParallel(model, device_ids=[0, 1])
 model = model.to(device)
@@ -119,18 +123,15 @@ for e in tqdm(range(1, EPOCHS+1)):
             #y_train_batch = torch.squeeze(y_train_batch)
             X_train_batch, y_train_batch = X_train_batch.to(device), y_train_batch.to(device)
             optimizer.zero_grad()
-            y_train_pred = model(X_train_batch)
+            y_train_pred = model(X_train_batch).squeeze()
             train_loss = criterion(y_train_pred, y_train_batch)
+            train_acc = binary_acc(y_train_pred, y_train_batch)
             train_loss.backward()
             optimizer.step()
+            train_epoch_loss += train_loss.item()
+            train_epoch_acc += train_acc.item()
             tepoch.set_postfix(loss=train_loss.item())
+            print(f'Epoch {e+0:02}: | Train Loss: {train_epoch_loss/len(train_loader):.5f} | Train Acc: {train_epoch_acc/len(train_loader):.3f}')
         training_state = {'model' : model.state_dict(),'optimizer' : optimizer.state_dict(),'epoch': e}
         torch.save(training_state, checkpoint_path)
-
-
-
-
-
-
-
 
