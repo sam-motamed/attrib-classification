@@ -59,6 +59,7 @@ def classify(img_path, net, use_gpu):
         ])
     img = Image.open(img_path)
     img = transform(img)
+    img = img.view(1, img.shape[0], img.shape[2], img.shape[2])
     net.eval()
     with torch.no_grad():
         logits = net(img)
