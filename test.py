@@ -59,7 +59,7 @@ def classify(img_path, net, use_gpu):
         ])
     img = Image.open(img_path)
     img = transform(img)
-    img = img.view(1, img.shape[0], img.shape[2], img.shape[2])
+    #img = img.view(1, img.shape[0], img.shape[2], img.shape[2])
     x = Variable(torch.unsqueeze(img, dim=0).float(), requires_grad=False)
  
     if use_gpu:
@@ -89,7 +89,7 @@ with torch.no_grad():
                 correct_class += 1
                 print("CORRECT")
             else:
-                PRINT("INCORRECT")
+                print("INCORRECT")
             #print("Extected:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  got  " + race[idx] )
 print("accuracy of 2 class pred is", correct_class / i)
 
