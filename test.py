@@ -87,8 +87,9 @@ with torch.no_grad():
         if race[idx] in ['White', 'Black']:
             if classify(imm_id[idx], model, use_gpu) == dict_race_to_number[race[idx]]:
                 correct_class += 1
+                print("CORRECT")
             else:
-                pass
-            print("Extected:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  got  " + race[idx] )
-print("accuracy of 3 class pred is", correct_class / i)
+                PRINT("INCORRECT")
+            #print("Extected:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  got  " + race[idx] )
+print("accuracy of 2 class pred is", correct_class / i)
 
