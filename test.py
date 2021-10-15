@@ -27,6 +27,8 @@ import torch.optim as optim
 from tqdm import tqdm
 from torch.autograd import Variable
 import pandas as pd
+import torch.nn.functional as F
+
 from sklearn.metrics import classification_report, confusion_matrix
 dict_race_to_number = {'White' : 0, 
                        'Black': 1, 
@@ -57,24 +59,20 @@ def classify(img_path, net, use_gpu):
         ])
     img = Image.open(img_path)
     img = transform(img)
- 
-    x = Variable(torch.unsqueeze(img, dim=0).float(), requires_grad=False)
- 
-    if use_gpu:
-        x = x.cuda()
-        net = net.cuda()
-    y = net(x).cpu()
-    y = torch.squeeze(y)
-    y = y.data.numpy()
-    #race_labels = y[1:]
-    max_prob_idx = np.argmax(y)
+    net.eval()
+    with torch.no_grad():
+        logits = net(img)
+        print(logits)
+        
+    probs = F.softmax(logits, dim = 1)
+    max_prob, ind = torch.max(probs, 1)
     '''if classed_race == actual_race:
         print("correct")
         return 1
     else:
         print("missed")
         return 0'''
-    return max_prob_idx
+    return ind
 use_gpu = torch.cuda.is_available()
 model = models.resnet50(pretrained=True)
 num_ftrs = model.fc.in_features
@@ -85,14 +83,16 @@ df = pd.read_csv('./fairface_label_val.csv')
 race = df['race']
 imm_id = df['file']
 correct_class = 0
+
 i = 0
-for idx in range(len(imm_id)):
-    i += 1
-    if race[idx] in ['East Asian', 'Southeat Asian', 'White', 'Black']:
-        if classify(imm_id[idx], model, use_gpu) == dict_race_to_number[race[idx]]:
-            correct_class += 1
-        else:
-            pass
-        #print("Extected:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  got  " + race[idx] )
+with torch.no_grad():
+    for idx in range(len(imm_id)):
+        i += 1
+        if race[idx] in ['East Asian', 'Southeat Asian', 'White', 'Black']:
+            if classify(imm_id[idx], model, use_gpu) == dict_race_to_number[race[idx]]:
+                correct_class += 1
+            else:
+                pass
+            print("Extected:  "+ list(dict_race_to_number.keys())[list(dict_race_to_number.values()).index(classify(imm_id[idx], model, use_gpu))] + "  got  " + race[idx] )
 print("accuracy of 3 class pred is", correct_class / i)
 
