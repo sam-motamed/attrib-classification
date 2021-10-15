@@ -60,20 +60,15 @@ def classify(img_path, net, use_gpu):
     img = Image.open(img_path)
     img = transform(img)
     img = img.view(1, img.shape[0], img.shape[2], img.shape[2])
-    net.eval()
-    with torch.no_grad():
-        logits = net(img)
-        print(logits)
-        
-    probs = F.softmax(logits, dim = 1)
-    max_prob, ind = torch.max(probs, 1)
-    '''if classed_race == actual_race:
-        print("correct")
-        return 1
-    else:
-        print("missed")
-        return 0'''
-    return ind
+    x = Variable(torch.unsqueeze(img, dim=0).float(), requires_grad=False)
+ 
+    if use_gpu:
+        x = x.cuda()
+        net = net.cuda()
+    y = net(x).cpu()
+    y = torch.squeeze(y)
+    y = y.data.numpy()
+    return np.argmax(y)
 use_gpu = torch.cuda.is_available()
 model = models.resnet50(pretrained=True)
 num_ftrs = model.fc.in_features
