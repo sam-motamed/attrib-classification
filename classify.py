@@ -10,6 +10,7 @@ import datetime
 import json
 import os
 import numpy as np
+import torch.nn.functional as F
 from os.path import join
 import torch
 import torch.nn as nn
@@ -54,7 +55,7 @@ class Custom(data.Dataset):
         self.tf = transforms.Compose([
             transforms.Resize((image_size, image_size)),
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         ])
     
     def __getitem__(self, index):
@@ -72,8 +73,24 @@ def multi_acc(y_pred, y_test):
     acc = correct_pred.sum() / len(correct_pred)
     
     acc = torch.round(acc * 100)
-    
-    return acc
+class Net(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 2)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
 def parse(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', dest='data_path', type=str, default='./train/')
@@ -82,8 +99,8 @@ def parse(args=None):
     return parser.parse_args(args)
 args = parse()
 train_dataset = Custom(args.data_path, args.attr_path, args.img_size)
-EPOCHS = 250
-BATCH_SIZE = 128
+EPOCHS = 50
+BATCH_SIZE = 164
 LEARNING_RATE = 0.0003
 NUM_FEATURES = len(train_dataset)
 NUM_CLASSES = 2
@@ -101,10 +118,10 @@ if torch.cuda.device_count() > 0:
     print("Let's use", torch.cuda.device_count(), "GPUs!")
 else:
     print("NO GPU WAS FOUND")
-model = models.resnet50(pretrained=True)
+model = models.resnet34(pretrained=True)
+
 num_ftrs = model.fc.in_features
 model.fc = nn.Linear(num_ftrs, 2)
-
 model = torch.nn.DataParallel(model, device_ids=[0, 1])
 model = model.to(device)
 checkpoint_path = os.path.join(os.getcwd(), "checkpoint.pth")
@@ -112,26 +129,34 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 model.train()
-running_loss = 0.0
+
 for e in tqdm(range(1, EPOCHS+1)):
+    train_loss = 0.0
     with tqdm(train_loader, unit="batch") as tepoch:
         # TRAINING
         tepoch.set_description(f"Epoch {e}")
         train_epoch_loss = 0
         train_epoch_acc = 0
-        for X_train_batch, y_train_batch in tepoch:
-            #y_train_batch = torch.squeeze(y_train_batch)
-            X_train_batch, y_train_batch = X_train_batch.to(device), y_train_batch.to(device)
+        for data, target in train_loader:
+        # move tensors to GPU if CUDA is available
+            data, target = data.cuda(), target.cuda()
+            # clear the gradients of all optimized variables
             optimizer.zero_grad()
-            y_train_pred = model(X_train_batch).squeeze()
-            train_loss = criterion(y_train_pred, y_train_batch)
-            train_acc = binary_acc(y_train_pred, y_train_batch)
-            train_loss.backward()
+            # forward pass: compute predicted outputs by passing inputs to the model
+            output = model(data)
+            # calculate the batch loss
+            loss = criterion(output, target)
+            # backward pass: compute gradient of the loss with respect to model parameters
+            loss.backward()
+            # perform a single optimization step (parameter update)
             optimizer.step()
-            train_epoch_loss += train_loss.item()
-            train_epoch_acc += train_acc.item()
-            tepoch.set_postfix(loss=train_loss.item())
-            print(f'Epoch {e+0:02}: | Train Loss: {train_epoch_loss/len(train_loader):.5f} | Train Acc: {train_epoch_acc/len(train_loader):.3f}')
+            # update training loss
+            train_loss += loss.item()*data.size(0)
+        # calculate average losses
+        train_loss = train_loss/len(train_loader.dataset)
+        # print training/validation statistics 
+        print('Epoch: {} \tTraining Loss: {:.6f}'.format(
+        e, train_loss))
         training_state = {'model' : model.state_dict(),'optimizer' : optimizer.state_dict(),'epoch': e}
         torch.save(training_state, checkpoint_path)
 
