@@ -158,5 +158,4 @@ for e in tqdm(range(1, EPOCHS+1)):
         print('Epoch: {} \tTraining Loss: {:.6f}'.format(
         e, train_loss))
         training_state = {'model' : model.state_dict(),'optimizer' : optimizer.state_dict(),'epoch': e}
-        torch.save(training_state, checkpoint_path)
-
+        torch.save(model.state_dict(), checkpoint_path)
