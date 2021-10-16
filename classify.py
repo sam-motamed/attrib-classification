@@ -73,24 +73,7 @@ def multi_acc(y_pred, y_test):
     acc = correct_pred.sum() / len(correct_pred)
     
     acc = torch.round(acc * 100)
-class Net(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 2)
 
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = torch.flatten(x, 1) # flatten all dimensions except batch
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
 def parse(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', dest='data_path', type=str, default='./train/')
@@ -99,8 +82,9 @@ def parse(args=None):
     return parser.parse_args(args)
 args = parse()
 train_dataset = Custom(args.data_path, args.attr_path, args.img_size)
-EPOCHS = 50
-BATCH_SIZE = 164
+test_dataset = Custom('./val/', './ff-race-val.txt', 128)
+EPOCHS = 1
+BATCH_SIZE = 64
 LEARNING_RATE = 0.0003
 NUM_FEATURES = len(train_dataset)
 NUM_CLASSES = 2
@@ -118,16 +102,18 @@ if torch.cuda.device_count() > 0:
     print("Let's use", torch.cuda.device_count(), "GPUs!")
 else:
     print("NO GPU WAS FOUND")
-model = models.resnet34(pretrained=True)
 
-num_ftrs = model.fc.in_features
-model.fc = nn.Linear(num_ftrs, 2)
+model = torchvision.models.resnet34(pretrained=True)
+in_ftr  = model.fc.in_features
+out_ftr = 2
+model.fc = nn.Linear(in_ftr,out_ftr,bias=True)
 model = torch.nn.DataParallel(model, device_ids=[0, 1])
 model = model.to(device)
 checkpoint_path = os.path.join(os.getcwd(), "checkpoint.pth")
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=0.0001)
 train_loader = DataLoader(dataset=train_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+test_loader = DataLoader(dataset=test_dataset,batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
 model.train()
 
 for e in tqdm(range(1, EPOCHS+1)):
@@ -144,7 +130,6 @@ for e in tqdm(range(1, EPOCHS+1)):
             optimizer.zero_grad()
             # forward pass: compute predicted outputs by passing inputs to the model
             output = model(data)
-            # calculate the batch loss
             loss = criterion(output, target)
             # backward pass: compute gradient of the loss with respect to model parameters
             loss.backward()
@@ -158,4 +143,20 @@ for e in tqdm(range(1, EPOCHS+1)):
         print('Epoch: {} \tTraining Loss: {:.6f}'.format(
         e, train_loss))
         training_state = {'model' : model.state_dict(),'optimizer' : optimizer.state_dict(),'epoch': e}
-        torch.save(model.state_dict(), checkpoint_path)
+torch.save(model.state_dict(), checkpoint_path)
+model.eval()
+accuracy = 0.0
+total = 0.0
+with torch.no_grad():
+    for data, target in test_loader:
+        data, target = data.cuda(), target.cuda()
+        # run the model on the test set to predict labels
+        outputs = model(data)
+        # the label with the highest energy will be our prediction
+        _, predicted = torch.max(outputs.data, 1)
+        total += target.size(0)
+        accuracy += (predicted == target).sum().item()
+    
+    # compute the accuracy over all test images
+accuracy = (100 * accuracy / total)
+print(accuracy)
