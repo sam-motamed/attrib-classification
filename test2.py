@@ -30,11 +30,9 @@ import torch.nn.functional as F
 from sklearn.metrics import classification_report, confusion_matrix
 dict_race_to_number = {'White' : 0, 
                        'Black': 1, 
-                       'Latino_Hispanic': 4, 
-                       'East Asian' : 2, 
-                       'Southeast Asian' : 2, 
-                       'Indian' : 5, 
-                       'Middle Eastern' : 6}
+                       'Latino_Hispanic': 3, 
+                       'Asian' : 2, 
+                       'Indian' : 4}
 
 missed_dic = {
     'White_as_Asian' : 0,
