@@ -27,7 +27,6 @@ from tqdm import tqdm
 from torch.autograd import Variable
 import pandas as pd
 import torch.nn.functional as F
-
 from sklearn.metrics import classification_report, confusion_matrix
 dict_race_to_number = {'White' : 0, 
                        'Black': 1, 
@@ -37,7 +36,28 @@ dict_race_to_number = {'White' : 0,
                        'Indian' : 5, 
                        'Middle Eastern' : 6}
 
-    
+missed_dic = {
+    'White_as_Asian' : 0,
+    'White_as_Indian' : 0,
+    'White_as_Black' : 0,
+    'White_as_Latino' : 0,
+    'Asian_as_White' : 0,
+    'Asian_as_Indian' : 0,
+    'Asian_as_Black' : 0,
+    'Asian_as_Latino' : 0,
+    'Black_as_White' : 0,
+    'Black_as_Indian' : 0,
+    'Black_as_Asian' : 0,
+    'Balck_as_Latino' : 0,
+    'Indian_as_White' : 0,
+    'Indian_as_Asian' : 0,
+    'Indian_as_Black' : 0,
+    'Indian_as_Latino' : 0,
+    'Latino_as_White' : 0,
+    'Latino_as_Indian' : 0,
+    'Latino_as_Black' : 0,
+    'Latino_as_White' : 0,
+    }
 class Custom(data.Dataset):
     def __init__(self, data_path, attr_path, image_size):
         self.data_path = data_path
@@ -75,10 +95,51 @@ with torch.no_grad():
         outputs = model(data)
         # the label with the highest energy will be our prediction
         _, predicted = torch.max(outputs.data, 1)
+        for idx in range(len(predicted)):
+            if target[idx] == 0 and predicted[idx] == 1:
+                missed_dic['White_as_Black'] += 1
+            elif target[idx] == 0 and predicted[idx] == 2:
+                missed_dic['White_as_Asian'] += 1
+            elif target[idx] == 0 and predicted[idx] == 3:
+                missed_dic['White_as_Latino'] += 1
+            elif target[idx] == 0 and predicted[idx] == 4:
+                missed_dic['White_as_Indian'] += 1
+            elif target[idx] == 1 and predicted[idx] == 0:
+                missed_dic['Black_as_White'] += 1
+            elif target[idx] == 1 and predicted[idx] == 2:
+                missed_dic['Black_as_Asian'] += 1
+            elif target[idx] == 1 and predicted[idx] == 3:
+                missed_dic['Black_as_Latino'] += 1
+            elif target[idx] == 1 and predicted[idx] == 4:
+                missed_dic['Black_as_Indian'] += 1
+            elif target[idx] == 2 and predicted[idx] == 0:
+                missed_dic['Asian_as_White'] += 1
+            elif target[idx] == 2 and predicted[idx] == 1:
+                missed_dic['Asian_as_Black'] += 1
+            elif target[idx] == 2 and predicted[idx] == 3:
+                missed_dic['Asian_as_Latino'] += 1
+            elif target[idx] == 2 and predicted[idx] == 4:
+                missed_dic['Asian_as_Indian'] += 1
+            elif target[idx] == 3 and predicted[idx] == 0:
+                missed_dic['Latino_as_White'] += 1
+            elif target[idx] == 3 and predicted[idx] == 1:
+                missed_dic['Latino_as_Black'] += 1
+            elif target[idx] == 3 and predicted[idx] == 2:
+                missed_dic['Latino_as_Asian'] += 1
+            elif target[idx] == 3 and predicted[idx] == 4:
+                missed_dic['Latino_as_Indian'] += 1
+            elif target[idx] == 4 and predicted[idx] == 0:
+                missed_dic['Indian_as_White'] += 1
+            elif target[idx] == 4 and predicted[idx] == 1:
+                missed_dic['Indian_as_Black'] += 1
+            elif target[idx] == 4 and predicted[idx] == 2:
+                missed_dic['Indian_as_Asian'] += 1
+            elif target[idx] == 4 and predicted[idx] == 3:
+                missed_dic['Indian_as_Latino'] += 1
         total += target.size(0)
         accuracy += (predicted == target).sum().item()
         print(predicted == target)
-    
+print(missed_dic)
     # compute the accuracy over all test images
 accuracy = (100 * accuracy / total)
 print(accuracy)
