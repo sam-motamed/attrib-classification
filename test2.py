@@ -54,7 +54,7 @@ missed_dic = {
     'Latino_as_White' : 0,
     'Latino_as_Indian' : 0,
     'Latino_as_Black' : 0,
-    'Latino_as_White' : 0,
+    'Latino_as_Asian' : 0,
     }
 class Custom(data.Dataset):
     def __init__(self, data_path, attr_path, image_size):
@@ -79,8 +79,9 @@ test_loader = DataLoader(dataset=test_dataset,batch_size=64, shuffle=True, num_w
 
 model = models.resnet34(pretrained=True)
 num_ftrs = model.fc.in_features
-model.fc = nn.Linear(num_ftrs, 2)
+model.fc = nn.Linear(num_ftrs, 5)
 model.load_state_dict(torch.load('./checkpoint.pth'), strict=False)
+model = nn.DataParallel(model, device_ids=[0])
 model.cuda()
 model.eval()
 accuracy = 0
